@@ -1,0 +1,79 @@
+version: '3.6'
+services:
+    nginx:
+        restart: always
+        build: ./images/nginx
+        ports:
+            - 8081:80
+        volumes:
+            - './images/nginx:/etc/nginx/conf.d'
+            - './logs:/var/log/nginx'
+            - './..:/var/www'
+        container_name: sm_nginx
+        depends_on:
+            - php
+            - cli
+
+    php:
+        build:
+            context: ./images/php
+            target: php
+            args:
+                UID: ${UID}
+                UNAME: ${UNAME}
+                UPASS: ${UPASS}
+        working_dir: ${WORKING_DIR}
+        user: ${UID}
+        volumes:
+            - './..:/var/www'
+        depends_on:
+            - mysql
+        container_name: sm_php
+        restart: on-failure
+        environment:
+            XDEBUG_CONFIG: idekey=PHPSTORM remote_host=${DOCKER_OS_HOST} remote_enable=1
+            PHP_IDE_CONFIG: serverName=api.loc
+            PHP_OPCACHE_VALIDATE_TIMESTAMPS: 1
+            TZ: ${TZ}
+
+    cli:
+        build:
+            context: ./images/php-cli
+            args:
+                UID: ${UID}
+                UNAME: ${UNAME}
+                UPASS: ${UPASS}
+        working_dir: ${WORKING_DIR}
+        user: ${UID}
+        volumes:
+            - './..:/var/www'
+        restart: on-failure
+        container_name: sm_cli
+        tty: true
+        depends_on:
+            - mysql
+
+    mysql:
+        image: 'mariadb:10.2.31'
+        restart: always
+        ports:
+            - 3317:3306
+        volumes:
+            - './mysql:/var/lib/mysql'
+        container_name: sm_mysql
+        environment:
+            MYSQL_ROOT_PASSWORD: mysecret
+            MYSQL_DATABASE: sm
+            MYSQL_USER: root
+#    mysql:
+#        image: "mysql:5.7"
+#        restart: always
+#        ports:
+#            - 3306:3306
+#        volumes:
+#            - './mysql:/var/lib/mysql'
+#        container_name: sm_mysql
+#        environment:
+#            MYSQL_ROOT_PASSWORD: mysecret
+#            MYSQL_DATABASE: sm
+#            MYSQL_USER: root
